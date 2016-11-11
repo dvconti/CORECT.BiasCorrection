@@ -68,7 +68,7 @@ OR.est <- est[grep("OR", names(est))]
 
 # output results
 # plot of SNP bias reduction
-pdf("SumStat.BiasReduced.RiskScores.SE.Impact.pdf")
+#pdf("SumStat.BiasReduced.RiskScores.SE.Impact.pdf")
 plot(exp(beta.hat[se.beta==se.beta[1]]), exp(beta.est[se.beta==se.beta[1]]), typ="l", lwd=2, xlab="MLE estimate", ylab="Biased Reduced Estimate", ylim=c(1,max(exp(beta.hat))), xlim=c(1,max(exp(beta.hat))))
 l.se.betas <- unique(se.beta)
 index <- 2
@@ -77,8 +77,9 @@ for(s in l.se.betas[l.se.betas!=se.beta[1]]) {
   index <- index + 1
 }
 legend(1, max(exp(beta.est)), legend=c(paste("SE=", l.se.betas, sep="")), lty=1, col=1:N, cex=.5)
-dev.off()
-pdf("SumStat.BiasReduced.RiskScores.Beta.Impact.pdf")
+#dev.off()
+
+#pdf("SumStat.BiasReduced.RiskScores.Beta.Impact.pdf")
 plot(se.beta[beta.hat==beta.hat[1]], exp(beta.est[beta.hat==beta.hat[1]]), typ="l", lwd=2, xlab="SE of the MLE estimate", ylab="Biased Reduced Estimate", ylim=c(1,max(exp(beta.hat))))
 abline(a=0, b=1, lty=2)
 l.betas <- unique(beta.hat)
@@ -88,10 +89,10 @@ for(s in l.betas[l.betas!=beta.hat[1]]) {
   index <- index + 1
 }
 legend(se.beta[1], max(exp(beta.est)), legend=c(paste("OR.hat=", round(exp(l.betas),3), sep="")), lty=1, col=1:M, cex=.5)
-dev.off()
+#dev.off()
 
 
-pdf("SumStat.BiasReduced.RiskScores.P.Value.Impact.pdf")
+#pdf("SumStat.BiasReduced.RiskScores.P.Value.Impact.pdf")
 l.betas <- unique(beta.hat)
 plot(-log(p.value), exp(beta.est), pch=16, col=match(beta.hat, l.betas), xlab="-log(P.Value) of the MLE estimate", ylab="Biased Reduced Estimate", ylim=c(1,max(exp(beta.hat))))
 index <- 1
@@ -100,7 +101,7 @@ for(s in l.betas) {
   index <- index + 1
 }
 legend(se.beta[1], max(exp(beta.est)), legend=c(paste("OR.hat=", round(exp(l.betas),3), sep="")), lty=1, col=1:M, cex=.5)
-dev.off()
+#dev.off()
 
 r <- summary(model.fit)
 write.table(round(r$quantiles, 3), file="Summary.SumStat.BiasReduced.RiskScores.Performance.txt", sep="\t")
