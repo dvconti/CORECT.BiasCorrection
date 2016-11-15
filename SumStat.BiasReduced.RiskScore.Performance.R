@@ -9,10 +9,12 @@
 # David Conti
 #################################################
 
+
+
 library(R2jags)
 set.seed(123)
 
-# investigating ranges of shrinkage
+# investigating ranges of shrinkage by varying the MLE estimate and MLE se of the estimate
 beta.hat <- log(seq(from=1.01, to=1.1, by=0.01))
 M <- length(beta.hat)
 se.beta <- seq(from=0.01, to=0.02, by=0.001)
@@ -22,15 +24,15 @@ se.beta <- rep(se.beta, each=M)
 prec.beta <- 1/(se.beta^2)
 p.value <- 2*(1-pnorm(beta.hat/se.beta))
 
-zeros <- rep(0, M*N)
 
-###### priors on effects
+###### priors on effects for hierarchical model
 sigma <- rep(0.05, M*N)
 sigma2 <- sigma^2
 for(i in 1:M*N) { print(c(exp(0-1.96*sigma[i]),exp(0+1.96*sigma[i]))) }
 
 
 ###### Run JAGs hierarchical model
+zeros <- rep(0, M*N)
 # define JAGS model
 model.string <-
 "model {
