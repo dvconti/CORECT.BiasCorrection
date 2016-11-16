@@ -11,21 +11,23 @@
 
 library(R2jags)
 set.seed(123)
-setwd("/Users/davidconti/Documents/Collaborations/CORECT/Manuscripts/CORECT OncoArray Main Effects/BiasCorrection")
+setwd("/Users/davidconti/Google Drive/Collaborations/CORECT/Manuscripts/CORECT OncoArray Main Effects/BiasCorrection/CORECT.BiasCorrection")
 
-d <- read.table("known_novel_hits_risk_allele.txt", header=T, sep="\t")
-
-beta.hat <- d$logOR
+# get data
+d <- read.table("known_novel_hits_risk_allele_v2.txt", header=T, sep="\t")
+beta.hat <- d$OR_FLIPPED*d$logOR*-1 + (d$OR_FLIPPED-1)*d$logOR*-1
 prec.beta <- 1/(d$SE^2)
-p <- d$FRQ.EUR.p
-q <- 1-p
 M <- length(beta.hat)
-zeros <- rep(0, M)
+p <- d$FRQ.EUR.p
 novel <- d$NOVEL+1  # novel indexed with 2, known with 1
 include.FRR <- ifelse(d$PRUNE=="NO", 1, 0)
+include.FRR.known <- ifelse(d$PRUNE=="YES", 0, ifelse(d$NOVEL==1,0,1))
+q <- 1-p
+zeros <- rep(0, M)
+
 
 ###### priors on effects
-sigma2 <- c(0.25^2, 0.05^2)
+sigma2 <- c(0.14^2, 0.05^2)
 # prior on novel SNPs
 # 95% prior certainty interval =
 c(exp(0-1.96*sqrt(sigma2[2])),exp(0+1.96*sqrt(sigma2[2])))
@@ -34,7 +36,7 @@ c(exp(0-1.96*sqrt(sigma2[2])),exp(0+1.96*sqrt(sigma2[2])))
 c(exp(0-1.96*sqrt(sigma2[1])),exp(0+1.96*sqrt(sigma2[1])))
 
 # uncertainty on known FRR
-lambda0.m <- 1.9
+lambda0.m <- 2.0
 se0 <- 1/7
 c(lambda0.m-(1.96*se0),(lambda0.m+ 1.96*se0))
 lambda0.prec <- 1/se0^2
@@ -48,6 +50,7 @@ model.string <-
   for(m in 1:M) {
     beta[m] ~ dnorm(beta.hat[m], prec.beta[m])  # generate the MLE effect estimates
     OR[m] <- exp(beta[m])
+    r[m] <- exp(abs(beta[m]))
 
     # normal prior on beta using the zeroes trick
     phi[m] <- C-l[m]
@@ -55,12 +58,13 @@ model.string <-
     zeros[m] ~ dpois(phi[m])
 
     # calculate components for FRR
-    lambda[m] <- (p[m]*OR[m]*OR[m] + q[m])/((p[m]*OR[m] + q[m])*(p[m]*OR[m] + q[m]))
+    lambda[m] <- (p[m]*r[m]*r[m] + q[m])/((p[m]*r[m] + q[m])*(p[m]*r[m] + q[m]))
     log.lambda[m] <- log(lambda[m])
   }
 
   # calculate proportion of FRR
-  FRR <- inprod(log.lambda[], include.FRR[])/log(lambda0)
+  FRR.all <- inprod(log.lambda[], include.FRR[])/log(lambda0)
+  FRR.known <- inprod(log.lambda[], include.FRR.known[])/log(lambda0)
 
   # prior on lambda0 (known familial relative risk
   lambda0 ~ dnorm(lambda0.m, lambda0.prec)
@@ -69,23 +73,22 @@ model.string <-
 jdata <- list(beta.hat=beta.hat,  prec.beta=prec.beta,
               p=p, q=q, M=M, sigma2=sigma2,
               lambda0.m=lambda0.m, lambda0.prec=lambda0.prec,
-              novel=novel, include.FRR=include.FRR, zeros=zeros)
+              novel=novel, include.FRR=include.FRR, include.FRR.known=include.FRR.known,
+              zeros=zeros)
 
-var.s <- c("OR", "FRR", "beta")
+var.s <- c("OR", "FRR.all", "FRR.known", "beta")
 model.fit <- jags.model(file=textConnection(model.string), data=jdata, n.chains=1, n.adapt=5000)
 update(model.fit, n.iter=10000, progress.bar="text")
 model.fit <- coda.samples(model=model.fit, variable.names=var.s, n.iter=20000, thin=2, quiet=F)
 
 model.coda <- as.data.frame(model.fit[[1]])
 est <- apply(model.coda, 2, mean)
-se <- apply(model.coda,2,sd)
-lower <- apply(model.coda,2,function(x) {quantile(x,0.025)})
-upper <- apply(model.coda,2,function(x) {quantile(x,0.975)})
 
 lambda.est <- est[grep("lambda", names(est))]
 beta.est <- est[grep("beta", names(est))]
 OR.est <- est[grep("OR", names(est))]
-FRR.est <- est[grep("FRR", names(est))]
+FRR.all.est <- est[grep("FRR.all", names(est))]
+FRR.known.est <- est[grep("FRR.known", names(est))]
 
 
 # output results
@@ -93,7 +96,7 @@ FRR.est <- est[grep("FRR", names(est))]
 pdf("BiasReducedGWAS.Estimates.pdf")
 plot(exp(beta.hat), exp(beta.est), pch=16, col=novel, xlab="MLE estimate", ylab="Biased Reduced Estimate")
 abline(a=0, b=1)
-legend(1, 1.15, legend=c("Known", "Novel"), col=c(1,2), pch=16)
+legend(.9, 1.15, legend=c("Known", "Novel"), col=c(1,2), pch=16)
 dev.off()
 
 r <- summary(model.fit)
