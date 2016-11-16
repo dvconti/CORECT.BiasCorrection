@@ -100,5 +100,6 @@ legend(.9, 1.15, legend=c("Known", "Novel"), col=c(1,2), pch=16)
 dev.off()
 
 r <- summary(model.fit)
-write.table(round(r$quantiles, 3), file="SummaryBiasReducedGWAS.FRR.Estimates.txt", sep="\t")
+write.table(r$statistics, file="SummaryBiasReducedGWAS.FRR.Estimates.txt", sep="\t")
+write.table(r$quantiles, file="SummaryBiasReducedGWAS.FRR.Estimates.txt", sep="\t", append=T)
 

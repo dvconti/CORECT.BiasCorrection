@@ -81,5 +81,6 @@ abline(a=0, b=1)
 dev.off()
 
 r <- summary(model.fit)
-write.table(r, file="Summary.SumStat.BiasReduced.RiskScores.Estimates.txt", sep="\t")
+write.table(r$statistics, file="Summary.SumStat.BiasReduced.RiskScores.Estimates.txt", sep="\t")
+write.table(r$quantiles, file="Summary.SumStat.BiasReduced.RiskScores.Estimates.txt", sep="\t", append=T)
 
